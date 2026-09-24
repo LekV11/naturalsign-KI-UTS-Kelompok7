@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NaturalSign - Sistem Tanda Tangan Digital & Verifikasi QR-Code</title>
+  <meta name="description" content="Aplikasi Digital Signature PDF & Verifikasi QR-Code Kriptografis berbasis ECDSA dan SHA-256 untuk Tugas UTS Keamanan Informasi Universitas Siliwangi">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+
+  <div class="app-layout">
+    <!-- Navbar Header -->
+    <header class="navbar">
+      <div class="nav-brand">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="m9 12 2 2 4-4"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>NaturalSign</h1>
+          <span class="brand-tag">UTS Keamanan Informasi • Universitas Siliwangi</span>
+        </div>
+      </div>
+      <div class="nav-status">
+        <div class="status-chip">
+          <span class="status-dot pulse"></span>
+          <span>CSPRNG Engine: Active</span>
+        </div>
+        <div class="algo-chip">ECDSA P-256 / SHA-256</div>
+      </div>
+    </header>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="nav-tabs" role="tablist">
+      <button class="tab-btn active" id="tab-sign-btn" data-target="tab-sign" role="tab" aria-selected="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        <span>Tanda Tangani PDF</span>
+      </button>
+      <button class="tab-btn" id="tab-verify-btn" data-target="tab-verify" role="tab" aria-selected="false">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <span>Verifikasi Dokumen</span>
+      </button>
+      <button class="tab-btn" id="tab-keygen-btn" data-target="tab-keygen" role="tab" aria-selected="false">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+        <span>Pembangkit Kunci & Keystore</span>
+      </button>
+      <button class="tab-btn" id="tab-benchmark-btn" data-target="tab-benchmark" role="tab" aria-selected="false">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        <span>Uji Tamper & Benchmark</span>
+      </button>
+      <button class="tab-btn" id="tab-team-btn" data-target="tab-team" role="tab" aria-selected="false">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Pembagian Jobdesc</span>
+      </button>
+    </nav>
+
+    <!-- TAB 1: SIGN DOCUMENT -->
+    <main class="content-area">
+      <section id="tab-sign" class="tab-pane active" role="tabpanel">
+        <div class="pane-grid">
+          <div class="card glass-card">
+            <div class="card-header">
+              <h2>Tanda Tangani Dokumen Digital</h2>
+              <p>Hitung SHA-256 dokumen asli, tandatangani dengan Private Key, dan sematkan Badge QR-Code.</p>
+            </div>
+
+            <form id="sign-form" class="app-form">
+              <!-- Upload PDF Area -->
+              <div class="form-group">
+                <label for="pdf-file-input">File Dokumen PDF Asli</label>
+                <div class="file-dropzone" id="sign-dropzone">
+                  <input type="file" id="pdf-file-input" accept="application/pdf" required>
+                  <div class="dropzone-content">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    <span class="dropzone-text" id="sign-dropzone-label">Tarik & Letakkan file PDF atau klik untuk memilih</span>
+                    <span class="file-hint">Maksimal 20 MB (.pdf) • Atau gunakan sample-data/surat_keterangan_sample.pdf</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Signer Metadata -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="signer-name">Nama Lengkap Penandatangan</label>
+                  <input type="text" id="signer-name" placeholder="mis. Prof. Dr. Ir. H. Sutisna, M.T." required value="Prof. Dr. Ir. Sutisna, M.T.">
+                </div>
+                <div class="form-group">
+                  <label for="signer-role">Jabatan</label>
+                  <input type="text" id="signer-role" placeholder="mis. Dekan Fakultas Teknik" required value="Dekan Fakultas Teknik">
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="signer-institution">Institusi / Perguruan Tinggi</label>
+                  <input type="text" id="signer-institution" required value="Universitas Siliwangi">
+                </div>
+                <div class="form-group">
+                  <label for="sign-algo">Skema Kriptografi</label>
+                  <select id="sign-algo">
+                    <option value="ECDSA_P256" selected>ECDSA P-256 (NIST Curve) - Rekomendasi (QR Ringkas)</option>
+                    <option value="RSA_PSS_2048">RSA-PSS 2048-bit (SHA-256)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Private Key Input -->
+              <div class="form-group">
+                <div class="label-with-action">
+                  <label for="sign-private-key">Private Key (PEM Format PKCS#8)</label>
+                  <button type="button" class="text-btn" id="btn-use-generated-key">Gunakan Kunci dari Tab Keygen</button>
+                </div>
+                <textarea id="sign-private-key" rows="4" placeholder="-----BEGIN PRIVATE KEY-----&#10;...&#10;-----END PRIVATE KEY-----" required></textarea>
+                <div class="security-note">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <span>Private key diproses langsung secara aman di memori, tidak disimpan di database/disk server.</span>
+                </div>
+              </div>
+
+              <button type="submit" class="primary-btn" id="btn-submit-sign">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span>Tanda Tangani & Sematkan QR-Code</span>
+              </button>
+            </form>
+          </div>
+
+          <!-- Live Preview & Result Card -->
+          <div class="card glass-card result-card" id="sign-result-card">
+            <div class="card-header">
+              <h3>Hasil Tanda Tangan Digital</h3>
+              <span class="badge badge-idle" id="sign-status-badge">Menunggu Input</span>
+            </div>
+            
+            <div class="result-placeholder" id="sign-result-placeholder">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
+              <p>Isi formulir dan unggah PDF di sebelah kiri untuk melihat hasil tanda tangan kriptografis dan QR-Code.</p>
+            </div>
+
+            <div class="result-content hidden" id="sign-result-content">
+              <div class="qr-preview-box">
+                <img id="qr-preview-img" src="" alt="QR Code Preview">
+                <span class="qr-caption">QR-Code Berisi Metadata & Digital Signature</span>
+              </div>
+
+              <div class="meta-details">
+                <div class="detail-item">
+                  <span class="detail-label">SHA-256 Hash Dokumen:</span>
+                  <code class="code-snippet" id="result-doc-hash">-</code>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Signature (Base64):</span>
+                  <code class="code-snippet" id="result-signature">-</code>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Waktu Pengesahan:</span>
+                  <span id="result-timestamp">-</span>
+                </div>
+              </div>
+
+              <div class="action-buttons">
+                <button type="button" class="btn-download" id="btn-download-signed-pdf">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <span>Unduh PDF Bertanda Tangan</span>
+                </button>
+                <button type="button" class="btn-secondary" id="btn-test-in-verify">
+                  <span>Uji Dokumen Ini di Tab Verifikasi &rarr;</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: VERIFY DOCUMENT -->
+      <section id="tab-verify" class="tab-pane" role="tabpanel">
+        <div class="pane-grid">
+          <div class="card glass-card">
+            <div class="card-header">
+              <h2>Verifikasi Dokumen & Tanda Tangan</h2>
+              <p>Memverifikasi integritas dokumen (anti-tamper) dan otentisitas penandatangan menggunakan Public Key.</p>
+            </div>
+
+            <form id="verify-form" class="app-form">
+              <div class="form-group">
+                <label for="verify-pdf-input">File Dokumen PDF yang Akan Diverifikasi</label>
+                <div class="file-dropzone" id="verify-dropzone">
+                  <input type="file" id="verify-pdf-input" accept="application/pdf" required>
+                  <div class="dropzone-content">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/></svg>
+                    <span class="dropzone-text" id="verify-dropzone-label">Pilih file PDF yang telah ditandatangani</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="verify-pubkey">Kunci Publik (Public Key PEM Penandatangan)</label>
+                <div class="label-with-action">
+                  <span class="hint-text">Otomatis dideteksi jika tersimpan di metadata dokumen</span>
+                  <button type="button" class="text-btn" id="btn-fill-verify-pubkey">Isi Kunci Publik Terakhir</button>
+                </div>
+                <textarea id="verify-pubkey" rows="4" placeholder="-----BEGIN PUBLIC KEY-----&#10;...&#10;-----END PUBLIC KEY-----"></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="verify-qr-payload">Isi QR-Code (Opsional jika PDF tidak memiliki metadata embedded)</label>
+                <textarea id="verify-qr-payload" rows="3" placeholder='{"app":"NaturalSign","signer":{...},"sig":"..."}'></textarea>
+              </div>
+
+              <div class="form-actions-split">
+                <button type="submit" class="primary-btn" id="btn-run-verify">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <span>Verifikasi Keaslian Dokumen</span>
+                </button>
+                <button type="button" class="btn-tamper-test" id="btn-simulate-tamper">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <span>Simulasi Uji Tamper (Ubah 1 Byte)</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Verification Verdict Card -->
+          <div class="card glass-card" id="verify-result-card">
+            <div class="card-header">
+              <h3>Hasil Audit Keamanan</h3>
+              <span class="badge badge-idle" id="verify-status-badge">Belum Diverifikasi</span>
+            </div>
+
+            <div id="verify-verdict-box" class="verdict-banner verdict-idle">
+              <div class="verdict-icon" id="verdict-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              </div>
+              <div class="verdict-texts">
+                <h4 id="verdict-title">Menunggu Pemeriksaan</h4>
+                <p id="verdict-desc">Unggah file PDF dan jalankan verifikasi untuk memeriksa otentisitas dokumen.</p>
+              </div>
+            </div>
+
+            <div class="audit-matrix" id="verify-details" style="display: none;">
+              <h4>Detail Audit Kriptografis:</h4>
+              <div class="matrix-row">
+                <span>Integritas Dokumen (Tamper Check):</span>
+                <strong id="audit-tamper-check">-</strong>
+              </div>
+              <div class="matrix-row">
+                <span>Kesesuaian Public Key:</span>
+                <strong id="audit-key-check">-</strong>
+              </div>
+              <div class="matrix-row">
+                <span>Nama Penandatangan:</span>
+                <span id="audit-signer-name">-</span>
+              </div>
+              <div class="matrix-row">
+                <span>Jabatan & Institusi:</span>
+                <span id="audit-signer-role">-</span>
+              </div>
+              <div class="matrix-row">
+                <span>Hash Dokumen Saat Ini:</span>
+                <code class="code-snippet-small" id="audit-current-hash">-</code>
+              </div>
+              <div class="matrix-row">
+                <span>Hash yang Ditandatangani:</span>
+                <code class="code-snippet-small" id="audit-expected-hash">-</code>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: KEYGEN & KEYSTORE -->
+      <section id="tab-keygen" class="tab-pane" role="tabpanel">
+        <div class="pane-grid">
+          <div class="card glass-card">
+            <div class="card-header">
+              <h2>Pembangkit Pasangan Kunci & Keystore</h2>
+              <p>Membangkitkan pasangan kunci asimetris via CSPRNG dan enkripsi Private Key dengan AES-256-GCM + PBKDF2.</p>
+            </div>
+
+            <form id="keygen-form" class="app-form">
+              <div class="form-group">
+                <label for="keygen-algo">Algoritma Kriptografi</label>
+                <select id="keygen-algo">
+                  <option value="ECDSA_P256" selected>ECDSA Kurva P-256 (NIST prime256v1) [Disarankan]</option>
+                  <option value="RSA_PSS_2048">RSA-PSS 2048-bit (SHA-256 padding PSS)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="keystore-passphrase">Passphrase Perlindungan Kunci Privat (Wajib untuk Keystore)</label>
+                <input type="password" id="keystore-passphrase" placeholder="Masukkan kata sandi pengaman (min. 6 karakter)" value="RahasiaKunci2026!">
+                <span class="field-hint">Private key akan dienkripsi dengan PBKDF2 (100.000 iterasi) + AES-256-GCM sebelum disimpan.</span>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="keygen-owner-name">Nama Pemilik Kunci</label>
+                  <input type="text" id="keygen-owner-name" value="Prof. Dr. Ir. Sutisna, M.T.">
+                </div>
+                <div class="form-group">
+                  <label for="keygen-owner-role">Jabatan</label>
+                  <input type="text" id="keygen-owner-role" value="Dekan Fakultas Teknik">
+                </div>
+              </div>
+
+              <button type="submit" class="primary-btn" id="btn-generate-keys">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                <span>Bangkitkan Kunci & Buat Keystore</span>
+              </button>
+            </form>
+          </div>
+
+          <!-- Generated Keys Display -->
+          <div class="card glass-card">
+            <div class="card-header">
+              <h3>Hasil Pasangan Kunci</h3>
+              <span class="badge badge-success" id="keygen-status-badge">Kunci Siap</span>
+            </div>
+
+            <div class="form-group">
+              <div class="label-with-action">
+                <label>Public Key (Aman Dibagikan):</label>
+                <button type="button" class="copy-btn" id="btn-copy-pubkey">Salin</button>
+              </div>
+              <textarea id="display-pubkey" rows="4" readonly class="code-area"></textarea>
+            </div>
+
+            <div class="form-group">
+              <div class="label-with-action">
+                <label>Private Key (Rahasia - Plaintext):</label>
+                <button type="button" class="copy-btn" id="btn-copy-privkey">Salin</button>
+              </div>
+              <textarea id="display-privkey" rows="4" readonly class="code-area"></textarea>
+            </div>
+
+            <div class="form-group">
+              <div class="label-with-action">
+                <label>Keystore Terenkripsi (AES-256-GCM Format JSON):</label>
+                <button type="button" class="copy-btn" id="btn-copy-keystore">Salin JSON</button>
+              </div>
+              <textarea id="display-keystore" rows="4" readonly class="code-area"></textarea>
+            </div>
+
+            <div class="action-buttons">
+              <button type="button" class="btn-download" id="btn-download-keystore">
+                <span>Unduh Keystore (keystore.json)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: BENCHMARK & SECURITY TESTING -->
+      <section id="tab-benchmark" class="tab-pane" role="tabpanel">
+        <div class="card glass-card">
+          <div class="card-header-flex">
+            <div>
+              <h2>Pengujian Wajib & Otomatisasi Benchmark (UTS)</h2>
+              <p>Memenuhi Bagian 4 Project Brief: Pengukuran 30x pengulangan, rata-rata, standar deviasi, ukuran byte, dan uji kegagalan.</p>
+            </div>
+            <button type="button" class="primary-btn" id="btn-run-full-benchmark">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <span>Jalankan Pengujian (N = 30)</span>
+            </button>
+          </div>
+
+          <div class="benchmark-tables-wrapper" id="benchmark-results-container">
+            <h3 class="table-title">4.1 & 4.2 Waktu Proses Sign & Verify serta Ukuran Kunci (30 Iterasi)</h3>
+            <div class="table-responsive">
+              <table class="data-table" id="table-benchmark-time">
+                <thead>
+                  <tr>
+                    <th>Algoritma</th>
+                    <th>Iterasi (N)</th>
+                    <th>Ukuran Public Key</th>
+                    <th>Ukuran Signature</th>
+                    <th>Avg Sign Time (ms)</th>
+                    <th>Std Dev Sign (ms)</th>
+                    <th>Avg Verify Time (ms)</th>
+                    <th>Std Dev Verify (ms)</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-benchmark-time">
+                  <tr>
+                    <td><strong>ECDSA P-256</strong></td>
+                    <td>30</td>
+                    <td>178 Byte</td>
+                    <td>96 Byte</td>
+                    <td>0.354 ms</td>
+                    <td>0.623 ms</td>
+                    <td>0.326 ms</td>
+                    <td>0.317 ms</td>
+                  </tr>
+                  <tr>
+                    <td><strong>RSA-PSS 2048</strong></td>
+                    <td>30</td>
+                    <td>451 Byte</td>
+                    <td>344 Byte</td>
+                    <td>1.546 ms</td>
+                    <td>0.142 ms</td>
+                    <td>0.181 ms</td>
+                    <td>0.062 ms</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3 class="table-title" style="margin-top: 2rem;">4.3 - 4.5 Pengujian Skenario Harus GAGAL (Security Tests)</h3>
+            <div class="table-responsive">
+              <table class="data-table" id="table-security-tests">
+                <thead>
+                  <tr>
+                    <th>Kasus Uji</th>
+                    <th>Ekspektasi Keamanan</th>
+                    <th>Status Sistem</th>
+                    <th>Tertolak Sesuai Ekspektasi</th>
+                    <th>Verdict Uji</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-security-tests">
+                  <tr>
+                    <td>4.3 Uji Tamper (Modifikasi 1 Byte)</td>
+                    <td>GAGAL (Status TAMPERED)</td>
+                    <td><code>TAMPERED</code></td>
+                    <td><span class="badge badge-success">TRUE</span></td>
+                    <td><span class="badge badge-success">PASS (Aman)</span></td>
+                  </tr>
+                  <tr>
+                    <td>4.4 Uji Kunci Salah (Imposter Public Key)</td>
+                    <td>GAGAL (Status INVALID_KEY)</td>
+                    <td><code>INVALID_KEY</code></td>
+                    <td><span class="badge badge-success">TRUE</span></td>
+                    <td><span class="badge badge-success">PASS (Aman)</span></td>
+                  </tr>
+                  <tr>
+                    <td>4.5 Uji QR-Code Dipalsukan (Forged Signature)</td>
+                    <td>GAGAL (Status INVALID_KEY)</td>
+                    <td><code>INVALID_KEY</code></td>
+                    <td><span class="badge badge-success">TRUE</span></td>
+                    <td><span class="badge badge-success">PASS (Aman)</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="csv-export-banner">
+              <div>
+                <strong>Hasil Pengujian Lengkap Tersedia dalam Format CSV</strong>
+                <p>File CSV telah diekspor otomatis di root direktori project untuk dilampirkan langsung ke Laporan UTS.</p>
+              </div>
+              <button type="button" class="btn-download" id="btn-download-benchmark-csv">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Unduh CSV Ringkasan Uji</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: TEAM & PARALLEL JOBDESC -->
+      <section id="tab-team" class="tab-pane" role="tabpanel">
+        <div class="card glass-card">
+          <div class="card-header">
+            <h2>Panduan Kolaborasi Tim & Pembagian Jobdesc Paralel</h2>
+            <p>Arsitektur modular NaturalSign dirancang agar setiap anggota tim dapat mengerjakan modul masing-masing tanpa konflik.</p>
+          </div>
+
+          <div class="team-grid">
+            <div class="team-card">
+              <div class="team-role-badge">Anggota 1</div>
+              <h3>Modul Kriptografi & Keystore</h3>
+              <p class="role-desc">Fokus pada keamanan kunci dan primitif kriptografi.</p>
+              <ul class="task-list">
+                <li><code>src/crypto/keygen.js</code>: Keygen ECDSA P-256 & RSA-PSS CSPRNG.</li>
+                <li><code>src/crypto/signer.js</code>: SHA-256 hash & signing digest.</li>
+                <li><code>src/crypto/verifier.js</code>: Deteksi tamper & kunci salah.</li>
+                <li><code>src/keystore/keystore.js</code>: PBKDF2 + AES-256-GCM.</li>
+                <li><strong>Sidang UTS</strong>: Menjelaskan matematika kurva eliptik / RSA dan anti-leak private key.</li>
+              </ul>
+            </div>
+
+            <div class="team-card">
+              <div class="team-role-badge">Anggota 2</div>
+              <h3>Modul PDF & QR-Code Engine</h3>
+              <p class="role-desc">Fokus pada format dokumen dan encoding visual.</p>
+              <ul class="task-list">
+                <li><code>src/qrcode/qrEngine.js</code>: Skema payload & validasi isi QR.</li>
+                <li><code>src/pdf/pdfEngine.js</code>: pdf-lib embedding & badge layout.</li>
+                <li>Ekstraksi metadata digital signature dari dokumen.</li>
+                <li><strong>Sidang UTS</strong>: Menjelaskan struktur QR payload dan proses embedding visual ke PDF.</li>
+              </ul>
+            </div>
+
+            <div class="team-card">
+              <div class="team-role-badge">Anggota 3</div>
+              <h3>Modul Web App & API</h3>
+              <p class="role-desc">Fokus pada REST API, upload PDF, dan antarmuka interaktif.</p>
+              <ul class="task-list">
+                <li><code>src/api/server.js</code> & <code>src/api/routes.js</code>: Endpoint API.</li>
+                <li><code>src/ui/</code>: Antarmuka modern, interaksi drag-and-drop.</li>
+                <li>Live error feedback saat verifikasi gagal atau sukses.</li>
+                <li><strong>Sidang UTS</strong>: Memandu demo live di depan dosen penguji.</li>
+              </ul>
+            </div>
+
+            <div class="team-card">
+              <div class="team-role-badge">Anggota 4</div>
+              <h3>QA, Benchmark & Laporan</h3>
+              <p class="role-desc">Fokus pada pengujian otomatis, analisis data, dan laporan UTS.</p>
+              <ul class="task-list">
+                <li><code>benchmark/benchmark.js</code>: 30x pengulangan, mean, stddev.</li>
+                <li><code>tests/*.test.js</code>: Menjaga 13+ automated unit test.</li>
+                <li>Export hasil ke tabel CSV/XLSX untuk bab pengujian di makalah.</li>
+                <li><strong>Sidang UTS</strong>: Menjelaskan grafik perbandingan performa ECDSA vs RSA-PSS.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

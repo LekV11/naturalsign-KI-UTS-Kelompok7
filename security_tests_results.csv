@@ -1,0 +1,4 @@
+testCase,expected,actualStatus,isRejectedAsExpected,verdict
+4.3 Uji Tamper (Modifikasi 1 Byte),GAGAL (Status TAMPERED),TAMPERED,true,PASS (Aman)
+4.4 Uji Kunci Salah (Imposter Public Key),GAGAL (Status INVALID_KEY),INVALID_KEY,true,PASS (Aman)
+4.5 Uji QR-Code Dipalsukan (Forged Signature),GAGAL (Status INVALID_KEY),INVALID_KEY,true,PASS (Aman)

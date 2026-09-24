@@ -1,0 +1,30 @@
+# Dependency directories
+node_modules/
+package-lock.json
+
+# Environment variables & secrets (Security Requirement)
+.env
+.env.local
+.env.*.local
+*.env
+
+# Keystore & cryptographic key files (Security Requirement - JANGAN di-commit!)
+*.pem
+*.key
+*.priv
+*.pkcs8
+keystore*.json
+keys/
+secrets/
+
+# Output directories & uploaded temporary files
+uploads/
+output/
+dist/
+temp/
+*.pdf.signed.pdf
+benchmark_results*.csv
+
+# OS metadata
+.DS_Store
+Thumbs.db
