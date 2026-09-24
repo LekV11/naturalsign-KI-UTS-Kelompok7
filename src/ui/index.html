@@ -36,8 +36,23 @@
           <span>CSPRNG Engine: Active</span>
         </div>
         <div class="algo-chip">ECDSA P-256 / SHA-256</div>
+        <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Aktifkan mode terang" title="Ganti tema">
+          <svg class="theme-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
+          <span>Mode terang</span>
+        </button>
       </div>
     </header>
+
+    <section class="welcome-banner" aria-label="Tentang NaturalSign">
+      <div>
+        <span class="welcome-eyebrow"><span class="status-dot"></span> RUANG KERJA DOKUMEN AMAN</span>
+        <h2>Kelola tanda tangan digital dengan mudah.</h2>
+        <p>Tandatangani, verifikasi, dan kelola kunci dokumen PDF dalam satu tempat.</p>
+      </div>
+      <div class="welcome-mark" aria-hidden="true">
+        <svg viewBox="0 0 64 64" width="58" height="58" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 8h17l13 13v32a3 3 0 0 1-3 3H20a3 3 0 0 1-3-3V11a3 3 0 0 1 3-3Z"/><path d="M37 8v14h13M25 34h17M25 41h10"/><path d="m34 49 5 5 11-12"/></svg>
+      </div>
+    </section>
 
     <!-- Main Navigation Tabs -->
     <nav class="nav-tabs" role="tablist">
@@ -56,10 +71,6 @@
       <button class="tab-btn" id="tab-benchmark-btn" data-target="tab-benchmark" role="tab" aria-selected="false">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
         <span>Uji Tamper & Benchmark</span>
-      </button>
-      <button class="tab-btn" id="tab-team-btn" data-target="tab-team" role="tab" aria-selected="false">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        <span>Pembagian Jobdesc</span>
       </button>
     </nav>
 
@@ -465,66 +476,6 @@
         </div>
       </section>
 
-      <!-- TAB 5: TEAM & PARALLEL JOBDESC -->
-      <section id="tab-team" class="tab-pane" role="tabpanel">
-        <div class="card glass-card">
-          <div class="card-header">
-            <h2>Panduan Kolaborasi Tim & Pembagian Jobdesc Paralel</h2>
-            <p>Arsitektur modular NaturalSign dirancang agar setiap anggota tim dapat mengerjakan modul masing-masing tanpa konflik.</p>
-          </div>
-
-          <div class="team-grid">
-            <div class="team-card">
-              <div class="team-role-badge">Anggota 1</div>
-              <h3>Modul Kriptografi & Keystore</h3>
-              <p class="role-desc">Fokus pada keamanan kunci dan primitif kriptografi.</p>
-              <ul class="task-list">
-                <li><code>src/crypto/keygen.js</code>: Keygen ECDSA P-256 & RSA-PSS CSPRNG.</li>
-                <li><code>src/crypto/signer.js</code>: SHA-256 hash & signing digest.</li>
-                <li><code>src/crypto/verifier.js</code>: Deteksi tamper & kunci salah.</li>
-                <li><code>src/keystore/keystore.js</code>: PBKDF2 + AES-256-GCM.</li>
-                <li><strong>Sidang UTS</strong>: Menjelaskan matematika kurva eliptik / RSA dan anti-leak private key.</li>
-              </ul>
-            </div>
-
-            <div class="team-card">
-              <div class="team-role-badge">Anggota 2</div>
-              <h3>Modul PDF & QR-Code Engine</h3>
-              <p class="role-desc">Fokus pada format dokumen dan encoding visual.</p>
-              <ul class="task-list">
-                <li><code>src/qrcode/qrEngine.js</code>: Skema payload & validasi isi QR.</li>
-                <li><code>src/pdf/pdfEngine.js</code>: pdf-lib embedding & badge layout.</li>
-                <li>Ekstraksi metadata digital signature dari dokumen.</li>
-                <li><strong>Sidang UTS</strong>: Menjelaskan struktur QR payload dan proses embedding visual ke PDF.</li>
-              </ul>
-            </div>
-
-            <div class="team-card">
-              <div class="team-role-badge">Anggota 3</div>
-              <h3>Modul Web App & API</h3>
-              <p class="role-desc">Fokus pada REST API, upload PDF, dan antarmuka interaktif.</p>
-              <ul class="task-list">
-                <li><code>src/api/server.js</code> & <code>src/api/routes.js</code>: Endpoint API.</li>
-                <li><code>src/ui/</code>: Antarmuka modern, interaksi drag-and-drop.</li>
-                <li>Live error feedback saat verifikasi gagal atau sukses.</li>
-                <li><strong>Sidang UTS</strong>: Memandu demo live di depan dosen penguji.</li>
-              </ul>
-            </div>
-
-            <div class="team-card">
-              <div class="team-role-badge">Anggota 4</div>
-              <h3>QA, Benchmark & Laporan</h3>
-              <p class="role-desc">Fokus pada pengujian otomatis, analisis data, dan laporan UTS.</p>
-              <ul class="task-list">
-                <li><code>benchmark/benchmark.js</code>: 30x pengulangan, mean, stddev.</li>
-                <li><code>tests/*.test.js</code>: Menjaga 13+ automated unit test.</li>
-                <li>Export hasil ke tabel CSV/XLSX untuk bab pengujian di makalah.</li>
-                <li><strong>Sidang UTS</strong>: Menjelaskan grafik perbandingan performa ECDSA vs RSA-PSS.</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
     </main>
   </div>
 

@@ -4,6 +4,34 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Theme preference
+  const themeToggle = document.getElementById('theme-toggle');
+  const themeIcon = themeToggle?.querySelector('.theme-icon');
+  const themeLabel = themeToggle?.querySelector('span');
+  const savedTheme = localStorage.getItem('naturalsign-theme');
+  const initialTheme = savedTheme === 'light' ? 'light' : 'dark';
+
+  function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    const nextTheme = theme === 'light' ? 'dark' : 'light';
+    const label = nextTheme === 'light' ? 'Mode terang' : 'Mode malam';
+    themeToggle?.setAttribute('aria-label', 'Aktifkan ' + label.toLowerCase());
+    themeToggle?.setAttribute('title', 'Ganti ke ' + label.toLowerCase());
+    if (themeLabel) themeLabel.textContent = label;
+    if (themeIcon) {
+      themeIcon.innerHTML = theme === 'light'
+        ? '<path d="M20.9 13A8.5 8.5 0 0 1 11 3.1 8.5 8.5 0 1 0 20.9 13Z"/>'
+        : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/>';
+    }
+  }
+
+  applyTheme(initialTheme);
+  themeToggle?.addEventListener('click', () => {
+    const nextTheme = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+    applyTheme(nextTheme);
+    localStorage.setItem('naturalsign-theme', nextTheme);
+  });
+
   // Global State
   let currentGeneratedKeys = null;
   let lastSignedPdfBlob = null;
