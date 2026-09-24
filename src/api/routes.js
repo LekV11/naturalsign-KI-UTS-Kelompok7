@@ -5,11 +5,12 @@
 
 import express from 'express';
 import multer from 'multer';
+import crypto from 'node:crypto';
 import { generateKeyPair, SUPPORTED_ALGORITHMS } from '../crypto/keygen.js';
 import { computeSHA256 } from '../crypto/signer.js';
 import { verifyDocument, VERIFICATION_STATUS } from '../crypto/verifier.js';
 import { encryptPrivateKey, decryptPrivateKey } from '../keystore/keystore.js';
-import { signAndEmbedPDF, extractSignatureFromPDF } from '../pdf/pdfEngine.js';
+import { signAndEmbedPDF, extractSignatureFromPDF, extractProtectedContent } from '../pdf/pdfEngine.js';
 import { parseQRPayload } from '../qrcode/qrEngine.js';
 import { runFullBenchmark } from '../../benchmark/benchmark.js';
 
@@ -23,7 +24,6 @@ export const apiRouter = express.Router();
 /**
  * 1. Pembangkitan Kunci (Keygen)
  * POST /api/keygen
- * body: { algorithm?: 'ECDSA_P256' | 'RSA_PSS_2048', passphrase?: string, signerName?: string }
  */
 apiRouter.post('/keygen', (req, res) => {
   try {
@@ -86,12 +86,6 @@ apiRouter.post('/keystore/decrypt', (req, res) => {
 /**
  * 4. Tanda Tangani Dokumen PDF (Sign & Embed QR)
  * POST /api/sign
- * multipart/form-data:
- *  - file (PDF)
- *  - signerName, role, institution
- *  - privateKey (PEM) ATAU keystore + passphrase
- *  - publicKey (opsional)
- *  - algorithm ('ECDSA_P256')
  */
 apiRouter.post('/sign', upload.single('file'), async (req, res) => {
   try {
@@ -103,11 +97,11 @@ apiRouter.post('/sign', upload.single('file'), async (req, res) => {
       signerName,
       role,
       institution,
-      algorithm = SUPPORTED_ALGORITHMS.ECDSA_P256,
-      publicKey
+      algorithm = SUPPORTED_ALGORITHMS.ECDSA_P256
     } = req.body;
 
     let privateKey = req.body.privateKey;
+    let publicKey = req.body.publicKey;
 
     // Jika user mengunggah keystore + passphrase, dekripsi terlebih dahulu
     if (!privateKey && req.body.keystore && req.body.passphrase) {
@@ -119,6 +113,15 @@ apiRouter.post('/sign', upload.single('file'), async (req, res) => {
         success: false,
         error: 'Private key atau Keystore terenkripsi + passphrase wajib disediakan'
       });
+    }
+
+    // Turunkan public key jika belum tersedia
+    if (!publicKey) {
+      try {
+        publicKey = crypto.createPublicKey(privateKey).export({ type: 'spki', format: 'pem' });
+      } catch (e) {
+        // Abaikan jika gagal
+      }
     }
 
     const signerMeta = {
@@ -136,7 +139,6 @@ apiRouter.post('/sign', upload.single('file'), async (req, res) => {
       algorithm
     );
 
-    // Kembalikan metadata & signed PDF (base64)
     res.json({
       success: true,
       data: {
@@ -156,12 +158,6 @@ apiRouter.post('/sign', upload.single('file'), async (req, res) => {
 /**
  * 5. Verifikasi Dokumen & Tanda Tangan
  * POST /api/verify
- * multipart/form-data:
- *  - file (PDF yang akan diverifikasi)
- *  - publicKey (PEM string opsional, jika tidak ada dicoba ambil dari metadata dokumen / QR)
- *  - expectedHash (opsional)
- *  - signature (opsional)
- *  - qrData (JSON string hasil scan QR-Code opsional)
  */
 apiRouter.post('/verify', upload.single('file'), async (req, res) => {
   try {
@@ -169,8 +165,11 @@ apiRouter.post('/verify', upload.single('file'), async (req, res) => {
       return res.status(400).json({ success: false, error: 'File dokumen harus diunggah' });
     }
 
-    const currentDocBuffer = req.file.buffer;
-    const currentDocHash = computeSHA256(currentDocBuffer);
+    const uploadedBuffer = req.file.buffer;
+
+    // Ekstrak dokumen kanonikal yang dilindungi & deteksi manipulasi container
+    const { protectedDocBuffer, isContainerTampered } = extractProtectedContent(uploadedBuffer);
+    const currentDocHash = computeSHA256(protectedDocBuffer);
 
     let publicKey = req.body.publicKey;
     let expectedDocHash = req.body.expectedHash;
@@ -192,14 +191,14 @@ apiRouter.post('/verify', upload.single('file'), async (req, res) => {
       }
     }
 
-    // B. Coba ekstrak dari metadata digital signature PDF bawaan NaturalSign
-    if (!signature || !expectedDocHash) {
-      const extracted = await extractSignatureFromPDF(currentDocBuffer);
+    // B. Ekstrak dari metadata digital signature bawaan NaturalSign
+    if (!signature || !expectedDocHash || !publicKey) {
+      const extracted = await extractSignatureFromPDF(uploadedBuffer);
       if (extracted) {
-        expectedDocHash = extracted.doc.hash;
-        signature = extracted.sig;
-        algorithm = extracted.doc.algo || algorithm;
-        signerMetadata = extracted.signer;
+        if (!expectedDocHash) expectedDocHash = extracted.doc.hash;
+        if (!signature) signature = extracted.sig;
+        if (!algorithm) algorithm = extracted.doc.algo || algorithm;
+        if (!signerMetadata) signerMetadata = extracted.signer;
         if (!publicKey && extracted.pub) {
           publicKey = extracted.pub;
         }
@@ -235,11 +234,12 @@ apiRouter.post('/verify', upload.single('file'), async (req, res) => {
 
     // Jalankan Verifikasi Kriptografis
     const verdict = verifyDocument(
-      currentDocBuffer,
+      protectedDocBuffer,
       expectedDocHash,
       signature,
       publicKey,
-      algorithm
+      algorithm,
+      isContainerTampered
     );
 
     res.json({

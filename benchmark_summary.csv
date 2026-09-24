@@ -1,3 +1,3 @@
 algorithm,iterations,pubKeySizeBytes,signatureSizeBytes,avgSignTimeMs,stdDevSignMs,avgVerifyTimeMs,stdDevVerifyMs
-ECDSA_P256,30,178,96,0.249,0.317,0.243,0.095
-RSA_PSS_2048,30,451,344,1.568,0.259,0.17,0.065
+ECDSA_P256,30,178,96,0.13,0.171,0.135,0.066
+RSA_PSS_2048,30,451,344,0.941,0.104,0.125,0.058

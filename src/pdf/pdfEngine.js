@@ -3,14 +3,24 @@
  * Anggota Penanggung Jawab: Modul 2 (PDF & QR-Code Engine)
  * 
  * Bertanggung jawab untuk:
- * 1. Membaca file PDF asli dan menghitung SHA-256 hash dokumen mentah.
+ * 1. Menghitung SHA-256 hash dari dokumen kanonikal yang dilindungi.
  * 2. Menyematkan QR-Code dan Badge Tanda Tangan Digital visual ke halaman PDF menggunakan pdf-lib.
- * 3. Menyimpan metadata tanda tangan (signature, docHash, signer) ke dalam dokumen PDF.
+ * 3. Mengemas canonical protected content dan container integrity hash secara deterministik,
+ *    sehingga proses verifikasi dapat memverifikasi isi dokumen asli sekaligus mendeteksi
+ *    manipulasi byte pada dokumen visual.
  */
 
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import crypto from 'node:crypto';
 import { computeSHA256, signHash } from '../crypto/signer.js';
 import { buildQRPayload, generateQRBuffer, generateQRDataURL } from '../qrcode/qrEngine.js';
+
+export const NATURALSIGN_DELIMITERS = {
+  DOC_START: '\n%===NATURALSIGN_PROTECTED_DOC_START===\n',
+  DOC_END: '\n%===NATURALSIGN_PROTECTED_DOC_END===\n',
+  CONT_START: '\n%===NATURALSIGN_CONTAINER_HASH_START===\n',
+  CONT_END: '\n%===NATURALSIGN_CONTAINER_HASH_END===\n'
+};
 
 /**
  * Menandatangani dokumen PDF dan menyematkan QR-Code visual serta metadata
@@ -36,7 +46,16 @@ export async function signAndEmbedPDF(
   algorithm = 'ECDSA_P256',
   badgeOptions = {}
 ) {
-  // 1. Hitung SHA-256 Hash dokumen asli (sebelum di-modify)
+  // Jika public key tidak disediakan, turunkan secara otomatis dari private key
+  if (!publicKeyPem && privateKeyPem) {
+    try {
+      publicKeyPem = crypto.createPublicKey(privateKeyPem).export({ type: 'spki', format: 'pem' });
+    } catch (e) {
+      // Fallback if unable to derive
+    }
+  }
+
+  // 1. Hitung SHA-256 Hash dokumen kanonikal yang dilindungi
   const docHash = computeSHA256(originalPdfBuffer);
 
   // 2. Tanda tangani NILAI HASH dokumen menggunakan private key
@@ -119,11 +138,10 @@ export async function signAndEmbedPDF(
   });
 
   // Teks Metadata di sisi kanan QR-Code
-  const textX = x + qrDisplaySize + 14;
   const sanitize = (str) => (str || '').replace(/[^\x20-\x7E]/g, '');
 
   targetPage.drawText(sanitize(signerMeta.signerName).substring(0, 24), {
-    x: textX,
+    x: x + qrDisplaySize + 14,
     y: y + badgeHeight - 30,
     size: 8.5,
     font: fontBold,
@@ -131,7 +149,7 @@ export async function signAndEmbedPDF(
   });
 
   targetPage.drawText(sanitize(signerMeta.role).substring(0, 28), {
-    x: textX,
+    x: x + qrDisplaySize + 14,
     y: y + badgeHeight - 42,
     size: 7,
     font: fontRegular,
@@ -139,7 +157,7 @@ export async function signAndEmbedPDF(
   });
 
   targetPage.drawText(sanitize(signerMeta.institution).substring(0, 28), {
-    x: textX,
+    x: x + qrDisplaySize + 14,
     y: y + badgeHeight - 53,
     size: 6.5,
     font: fontRegular,
@@ -153,7 +171,7 @@ export async function signAndEmbedPDF(
   });
 
   targetPage.drawText(`Tgl: ${dateStr}`, {
-    x: textX,
+    x: x + qrDisplaySize + 14,
     y: y + badgeHeight - 64,
     size: 6,
     font: fontRegular,
@@ -161,7 +179,7 @@ export async function signAndEmbedPDF(
   });
 
   targetPage.drawText(`SHA: ${docHash.substring(0, 14)}...`, {
-    x: textX,
+    x: x + qrDisplaySize + 14,
     y: y + badgeHeight - 74,
     size: 5.5,
     font: fontRegular,
@@ -177,10 +195,25 @@ export async function signAndEmbedPDF(
     `NATURALSIGN_PAYLOAD_START:${Buffer.from(JSON.stringify(qrPayload)).toString('base64')}:NATURALSIGN_PAYLOAD_END`
   ]);
 
-  const signedPdfBytes = await pdfDoc.save();
+  const visualPdfBytes = await pdfDoc.save();
+
+  // Hitung hash integritas container visual PDF
+  const containerHash = computeSHA256(visualPdfBytes);
+
+  // Bungkus dalam amplop paket bertanda tangan deterministik (NaturalSign Package)
+  const base64Protected = Buffer.from(originalPdfBuffer).toString('base64');
+  const packageBytes = Buffer.concat([
+    Buffer.from(visualPdfBytes),
+    Buffer.from(NATURALSIGN_DELIMITERS.DOC_START),
+    Buffer.from(base64Protected),
+    Buffer.from(NATURALSIGN_DELIMITERS.DOC_END),
+    Buffer.from(NATURALSIGN_DELIMITERS.CONT_START),
+    Buffer.from(containerHash),
+    Buffer.from(NATURALSIGN_DELIMITERS.CONT_END)
+  ]);
 
   return {
-    signedPdfBytes,
+    signedPdfBytes: packageBytes,
     docHash,
     signature,
     qrPayload,
@@ -189,11 +222,90 @@ export async function signAndEmbedPDF(
 }
 
 /**
- * Mengekstrak payload tanda tangan NaturalSign yang tersimpan di metadata PDF
+ * Mengekstrak dokumen kanonikal yang dilindungi serta memeriksa keutuhan container visual
+ * @param {Buffer|Uint8Array} fileBuffer
+ * @returns {{
+ *   protectedDocBuffer: Buffer,
+ *   isPackaged: boolean,
+ *   isContainerTampered: boolean
+ * }}
+ */
+export function extractProtectedContent(fileBuffer) {
+  if (!Buffer.isBuffer(fileBuffer)) {
+    fileBuffer = Buffer.from(fileBuffer);
+  }
+
+  const fileStr = fileBuffer.toString('binary');
+  const docStartDelim = NATURALSIGN_DELIMITERS.DOC_START;
+  const docEndDelim = NATURALSIGN_DELIMITERS.DOC_END;
+  const contStartDelim = NATURALSIGN_DELIMITERS.CONT_START;
+  const contEndDelim = NATURALSIGN_DELIMITERS.CONT_END;
+
+  const docStartIdx = fileStr.indexOf(docStartDelim);
+  const docEndIdx = fileStr.indexOf(docEndDelim);
+  const contStartIdx = fileStr.indexOf(contStartDelim);
+  const contEndIdx = fileStr.indexOf(contEndDelim);
+
+  // Jika paket NaturalSign terdeteksi
+  if (docStartIdx !== -1 && docEndIdx !== -1 && contStartIdx !== -1 && contEndIdx !== -1) {
+    const visualPart = fileBuffer.subarray(0, docStartIdx);
+    const b64Content = fileStr.substring(docStartIdx + docStartDelim.length, docEndIdx).trim();
+    const expectedContainerHash = fileStr.substring(contStartIdx + contStartDelim.length, contEndIdx).trim();
+
+    let protectedDocBuffer;
+    let isContainerTampered = false;
+
+    try {
+      protectedDocBuffer = Buffer.from(b64Content, 'base64');
+    } catch (e) {
+      isContainerTampered = true;
+      protectedDocBuffer = fileBuffer;
+    }
+
+    // Periksa apakah bagian visual PDF atau container diubah
+    const actualContainerHash = computeSHA256(visualPart);
+    if (actualContainerHash.toLowerCase() !== expectedContainerHash.toLowerCase()) {
+      isContainerTampered = true;
+    }
+
+    return {
+      protectedDocBuffer,
+      isPackaged: true,
+      isContainerTampered
+    };
+  }
+
+  // Jika dokumen adalah file PDF biasa / belum dipaketkan
+  return {
+    protectedDocBuffer: fileBuffer,
+    isPackaged: false,
+    isContainerTampered: false
+  };
+}
+
+/**
+ * Mengekstrak payload tanda tangan NaturalSign yang tersimpan di metadata PDF atau package
  * @param {Buffer|Uint8Array} pdfBytes
  * @returns {Promise<object|null>}
  */
 export async function extractSignatureFromPDF(pdfBytes) {
+  if (!Buffer.isBuffer(pdfBytes)) {
+    pdfBytes = Buffer.from(pdfBytes);
+  }
+
+  // 1. Ekstraksi langsung dari stream string biner (paling cepat & tahan tamper)
+  const fileStr = pdfBytes.toString('binary');
+  const matchDirect = fileStr.match(/NATURALSIGN_PAYLOAD_START:(.*?):NATURALSIGN_PAYLOAD_END/);
+  if (matchDirect && matchDirect[1]) {
+    try {
+      const jsonStr = Buffer.from(matchDirect[1], 'base64').toString('utf8');
+      return JSON.parse(jsonStr);
+    } catch (e) {
+      // lanjut ke pembacaan pdfDoc jika gagal
+    }
+  }
+
+  // 2. Ekstraksi via parser PDFDocument pdf-lib
   try {
     const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
     const keywords = pdfDoc.getKeywords();

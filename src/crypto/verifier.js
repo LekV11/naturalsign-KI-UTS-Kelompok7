@@ -59,11 +59,12 @@ export function verifyHash(hashHex, signatureBase64, publicKeyPem, algorithm = S
 /**
  * Verifikasi lengkap dokumen:
  * Membandingkan hash dokumen saat ini, hash yang ditandatangani, dan keaslian signature.
- * @param {Buffer|Uint8Array} currentDocBuffer - Isi dokumen yang sedang diperiksa
+ * @param {Buffer|Uint8Array} currentDocBuffer - Isi dokumen kanonikal yang sedang diperiksa
  * @param {string} expectedDocHash - Hash dokumen saat ditandatangani (dari QR / metadata)
  * @param {string} signatureBase64 - Tanda tangan digital
  * @param {string} publicKeyPem - Kunci publik pengesah
- * @param {string} algorithm - Algoritma penandatanganan
+ * @param {string} [algorithm=SUPPORTED_ALGORITHMS.ECDSA_P256] - Algoritma penandatanganan
+ * @param {boolean} [isContainerTampered=false] - Indikator apakah container PDF dimodifikasi
  * @returns {{
  *   isValid: boolean,
  *   status: string,
@@ -77,7 +78,8 @@ export function verifyDocument(
   expectedDocHash,
   signatureBase64,
   publicKeyPem,
-  algorithm = SUPPORTED_ALGORITHMS.ECDSA_P256
+  algorithm = SUPPORTED_ALGORITHMS.ECDSA_P256,
+  isContainerTampered = false
 ) {
   if (!currentDocBuffer || !signatureBase64 || !publicKeyPem) {
     return {
@@ -91,8 +93,8 @@ export function verifyDocument(
 
   const currentDocHash = computeSHA256(currentDocBuffer);
 
-  // 1. Cek apakah dokumen telah diubah (Tamper Check)
-  if (expectedDocHash && currentDocHash.toLowerCase() !== expectedDocHash.toLowerCase()) {
+  // 1. Cek Integritas Dokumen (Tamper Check)
+  if (isContainerTampered || (expectedDocHash && currentDocHash.toLowerCase() !== expectedDocHash.toLowerCase())) {
     return {
       isValid: false,
       status: VERIFICATION_STATUS.TAMPERED,
@@ -102,7 +104,7 @@ export function verifyDocument(
     };
   }
 
-  // 2. Cek apakah tanda tangan valid dengan public key penandatangan
+  // 2. Cek Otentisitas Tanda Tangan & Kecocokan Public Key
   const isSignatureMatch = verifyHash(currentDocHash, signatureBase64, publicKeyPem, algorithm);
 
   if (!isSignatureMatch) {

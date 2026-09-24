@@ -315,7 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
         badge.textContent = 'TAMPERED (RUSAK)';
         document.getElementById('audit-tamper-check').textContent = 'GAGAL (Isi Berubah!)';
         document.getElementById('audit-tamper-check').style.color = '#f87171';
-        document.getElementById('audit-key-check').textContent = 'TIDAK TERVALIDASI';
+        document.getElementById('audit-key-check').textContent = 'TIDAK VALID (Integritas Terganggu)';
         document.getElementById('audit-key-check').style.color = '#f87171';
       } else if (data.status === 'INVALID_KEY') {
         // KUNCI SALAH
@@ -324,8 +324,8 @@ document.addEventListener('DOMContentLoaded', () => {
         verdictDesc.textContent = data.message;
         badge.className = 'badge badge-warning';
         badge.textContent = 'KUNCI SALAH';
-        document.getElementById('audit-tamper-check').textContent = 'Hanya Hash Tidak Sesuai Kunci';
-        document.getElementById('audit-tamper-check').style.color = '#fbbf24';
+        document.getElementById('audit-tamper-check').textContent = 'LULUS (Dokumen Utuh & Tidak Berubah)';
+        document.getElementById('audit-tamper-check').style.color = '#34d399';
         document.getElementById('audit-key-check').textContent = 'GAGAL (Bukan Kunci Penandatangan)';
         document.getElementById('audit-key-check').style.color = '#fbbf24';
       } else {
@@ -434,7 +434,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('btn-download-benchmark-csv')?.addEventListener('click', () => {
-    // Buat data CSV ringkasan dari DOM tabel untuk langsung diunduh pengguna
     const table = document.getElementById('table-benchmark-time');
     let csv = [];
     for (let row of table.rows) {
